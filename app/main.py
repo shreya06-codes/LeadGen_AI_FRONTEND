@@ -65,6 +65,7 @@ app.include_router(users_router)
 app.include_router(reports_router)
 app.include_router(company_router)
 app.include_router(parser_router)
+app.include_router(export_router)
 
 @app.get("/")
 def home():

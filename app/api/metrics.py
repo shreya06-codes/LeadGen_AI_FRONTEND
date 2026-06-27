@@ -66,3 +66,36 @@ def get_metric(test_id: str):
         )
 
     return result
+@router.get("/summary/overview")
+def metrics_summary():
+
+    total = len(metrics)
+
+    if total == 0:
+        return {
+            "total_tests": 0,
+            "average_response_time": 0,
+            "average_throughput": 0,
+            "average_error_rate": 0,
+            "average_cpu_usage": 0,
+            "average_memory_usage": 0
+        }
+
+    return {
+        "total_tests": total,
+        "average_response_time": round(
+            sum(m["response_time"] for m in metrics) / total, 2
+        ),
+        "average_throughput": round(
+            sum(m["throughput"] for m in metrics) / total, 2
+        ),
+        "average_error_rate": round(
+            sum(m["error_rate"] for m in metrics) / total, 2
+        ),
+        "average_cpu_usage": round(
+            sum(m["cpu_usage"] for m in metrics) / total, 2
+        ),
+        "average_memory_usage": round(
+            sum(m["memory_usage"] for m in metrics) / total, 2
+        )
+    }

@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+from services.dashboard_services import get_dashboard_summary
 
 router = APIRouter(
     prefix="/analytics",
@@ -7,26 +8,7 @@ router = APIRouter(
 
 @router.get("/dashboard")
 def dashboard():
-
-    return {
-        "total_leads": 150,
-        "hot_leads": 45,
-        "warm_leads": 60,
-        "cold_leads": 45,
-
-        "active_crawlers": 5,
-        "running_jobs": 8,
-
-        "reports_generated": 20,
-
-        "success_rate": "92%",
-
-        "top_industries": [
-            "Technology",
-            "Healthcare",
-            "Finance"
-        ]
-    }
+    return get_dashboard_summary()
 
 
 @router.get("/stats")

@@ -1,18 +1,25 @@
 from fastapi import APIRouter
+from fastapi.responses import PlainTextResponse
+from services.export_services import export_csv, export_json
 
 router = APIRouter(
     prefix="/export",
     tags=["Export"]
 )
 
-@router.get("/csv")
-def export_csv():
-    return {
-        "message": "CSV export started"
-    }
 
-@router.get("/excel")
-def export_excel():
-    return {
-        "message": "Excel export started"
-    }
+@router.get("/json")
+def json_export():
+
+    return export_json()
+
+
+@router.get("/csv")
+def csv_export():
+
+    csv_data = export_csv()
+
+    return PlainTextResponse(
+        content=csv_data,
+        media_type="text/csv"
+    )
