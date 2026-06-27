@@ -1,5 +1,10 @@
 from fastapi import APIRouter
+from services.parser_services import parse_html
 from pydantic import BaseModel
+import requests
+from bs4 import BeautifulSoup
+from fastapi import HTTPException
+from pydantic import HttpUrl
 
 router = APIRouter(
     prefix="/crawler",
@@ -9,49 +14,49 @@ router = APIRouter(
 crawler_jobs = []
 
 class CrawlRequest(BaseModel):
-    source: str
-    target: str
+    url: HttpUrl
 
 # Start Crawl
 @router.post("/start")
 def start_crawl(job: CrawlRequest):
-    new_job = {
-        "id": len(crawler_jobs) + 1,
-        "source": job.source,
-        "target": job.target,
-        "status": "Running"
-    }
 
-    crawler_jobs.append(new_job)
-
-    return {
-        "message": "Crawler started",
-        "job": new_job
-    }
-
-# Get All Jobs
-@router.get("/jobs")
-def get_jobs():
-    return crawler_jobs
-
-# Get Job Status
-@router.get("/status/{job_id}")
-def get_status(job_id: int):
-    for job in crawler_jobs:
-        if job["id"] == job_id:
-            return job
-
-    return {"message": "Job not found"}
-
-# Stop Crawl
-@router.post("/stop/{job_id}")
-def stop_crawl(job_id: int):
-    for job in crawler_jobs:
-        if job["id"] == job_id:
-            job["status"] = "Stopped"
-            return {
-                "message": "Crawler stopped",
-                "job": job
+    try:
+        response = requests.get(
+            str(job.url),
+            timeout=10,
+            headers={
+                "User-Agent": "Mozilla/5.0"
             }
+        )
 
-    return {"message": "Job not found"}
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        title = soup.title.string.strip() if soup.title else "No Title"
+
+        new_job = {
+            "id": len(crawler_jobs) + 1,
+            "url": str(job.url),
+            "status": "Completed",
+            "status_code": response.status_code,
+            "title": title
+        }
+
+        crawler_jobs.append(new_job)
+
+        parsed_data = parse_html(
+            str(job.url),
+            response.text
+        )
+
+        return {
+            "message": "Website crawled successfully",
+            "job": new_job,
+            "data": parsed_data
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )

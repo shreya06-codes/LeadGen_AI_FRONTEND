@@ -23,7 +23,8 @@ from app.api.campaign import router as campaign_router
 from app.api.pipeline import router as pipeline_router
 from app.api.pipeline_logs import router as pipeline_logs_router
 from app.api.users import router as users_router
-from routers import company
+from app.api.company import router as company_router
+from app.api.parser import router as parser_router
 from database import init_db
 
 app = FastAPI(title="AURXON LoadGen AI")
@@ -62,12 +63,9 @@ app.include_router(campaign_router)
 app.include_router(pipeline_logs_router)
 app.include_router(users_router)
 app.include_router(reports_router)
-app.include_router(company.router)
-# HOME ROUTE
-@app.on_event("startup")
-def startup():
-    init_db()
-    
+app.include_router(company_router)
+app.include_router(parser_router)
+
 @app.get("/")
 def home():
     return {"message": "Welcome to AURXON Backend!"}

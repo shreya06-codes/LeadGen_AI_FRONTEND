@@ -1,24 +1,26 @@
 from fastapi import APIRouter
+from pydantic import BaseModel
+from services.enrichment_services import enrich_company
 
 router = APIRouter(
     prefix="/enrichment",
-    tags=["Lead Enrichment"]
+    tags=["AI Enrichment"]
 )
 
-@router.get("/{lead_id}")
-def enrich_lead(lead_id: int):
+class CompanyRequest(BaseModel):
+    company_name: str
+    website: str
 
-    enriched_data = {
-        "lead_id": lead_id,
-        "company_size": "500-1000",
-        "country": "USA",
-        "industry": "Technology",
-        "linkedin": "https://linkedin.com/company/sample",
-        "verified": True,
-        "revenue": "$50M"
-    }
+
+@router.post("/analyze")
+def analyze_company(data: CompanyRequest):
+
+    result = enrich_company(
+        data.company_name,
+        data.website
+    )
 
     return {
-        "message": "Lead enriched successfully",
-        "data": enriched_data
+        "message": "Company enriched successfully",
+        "data": result
     }
