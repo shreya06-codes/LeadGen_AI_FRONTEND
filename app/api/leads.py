@@ -1,59 +1,63 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from services.lead_services import (
+    create_lead,
+    get_all_leads,
+    get_lead,
+    delete_lead
+)
 
 router = APIRouter(
     prefix="/leads",
     tags=["Leads"]
 )
 
-leads = []
 
-class Lead(BaseModel):
-    company: str
+class LeadCreate(BaseModel):
+
+    company_name: str
     website: str
-    industry: str
     email: str
+    phone: str
+    industry: str
+    company_size: str
+    lead_quality: str
+    score: int
 
-# Create Lead
+
 @router.post("/")
-def create_lead(lead: Lead):
-    new_lead = {
-        "id": len(leads) + 1,
-        "company": lead.company,
-        "website": lead.website,
-        "industry": lead.industry,
-        "email": lead.email,
-        "score": 0,
-        "status": "New"
-    }
+def add_lead(lead: LeadCreate):
 
-    leads.append(new_lead)
+    return create_lead(lead.model_dump())
 
-    return {
-        "message": "Lead created",
-        "lead": new_lead
-    }
 
-# Get All Leads
 @router.get("/")
-def get_leads():
-    return leads
+def all_leads():
 
-# Get Single Lead
+    return get_all_leads()
+
+
 @router.get("/{lead_id}")
-def get_lead(lead_id: int):
-    for lead in leads:
-        if lead["id"] == lead_id:
-            return lead
+def single_lead(lead_id: int):
 
-    return {"message": "Lead not found"}
+    lead = get_lead(lead_id)
 
-# Delete Lead
+    if not lead:
+        raise HTTPException(
+            status_code=404,
+            detail="Lead not found"
+        )
+
+    return lead
+
+
 @router.delete("/{lead_id}")
-def delete_lead(lead_id: int):
-    for lead in leads:
-        if lead["id"] == lead_id:
-            leads.remove(lead)
-            return {"message": "Lead deleted"}
+def remove_lead(lead_id: int):
 
-    return {"message": "Lead not found"}
+    if delete_lead(lead_id):
+        return {"message": "Lead deleted"}
+
+    raise HTTPException(
+        status_code=404,
+        detail="Lead not found"
+    )

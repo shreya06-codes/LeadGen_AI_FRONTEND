@@ -3,23 +3,23 @@ def calculate_score(data):
     score = 0
     reasons = []
 
-    if data.company_name:
+    if data.get("company_name"):
         score += 20
         reasons.append("Company identified")
 
-    if data.email:
+    if data.get("email"):
         score += 20
         reasons.append("Email found")
 
-    if data.phone:
+    if data.get("phone"):
         score += 20
         reasons.append("Phone found")
 
-    if data.linkedin:
+    if data.get("linkedin"):
         score += 20
         reasons.append("LinkedIn found")
 
-    if data.industry and data.industry != "Unknown":
+    if data.get("industry") and data.get("industry") != "Unknown":
         score += 20
         reasons.append("Industry identified")
 
