@@ -1,37 +1,157 @@
-def enrich_company(company_name: str, website: str):
+import re
 
-    website = website.lower()
+def enrich_company(parsed_data):
+
+    title = (parsed_data.get("title") or "").lower()
+    description = (parsed_data.get("meta_description") or "").lower()
+
+    text = title + " " + description
+
+    # ----------------------
+    # Industry Detection
+    # ----------------------
 
     industry = "Unknown"
+
+    industry_keywords = {
+        "Technology": [
+            "software", "technology", "ai", "artificial intelligence",
+            "cloud", "saas", "cybersecurity", "developer"
+        ],
+
+        "Healthcare": [
+            "hospital", "medical", "health", "clinic",
+            "doctor", "pharma"
+        ],
+
+        "Finance": [
+            "bank", "finance", "investment",
+            "insurance", "fintech"
+        ],
+
+        "Education": [
+            "school", "college", "university",
+            "education", "learning"
+        ],
+
+        "Manufacturing": [
+            "factory", "manufacturing",
+            "industrial", "production"
+        ],
+
+        "E-Commerce": [
+            "shopping", "store",
+            "ecommerce", "online shop"
+        ]
+    }
+
+    for key, words in industry_keywords.items():
+
+        if any(word in text for word in words):
+            industry = key
+            break
+
+    # ----------------------
+    # Company Size
+    # ----------------------
+
+    company_size = "Small"
+
+    if any(word in text for word in [
+        "enterprise",
+        "global",
+        "fortune",
+        "multinational"
+    ]):
+        company_size = "Large"
+
+    elif any(word in text for word in [
+        "growing",
+        "expanding",
+        "national"
+    ]):
+        company_size = "Medium"
+
+    # ----------------------
+    # Business Category
+    # ----------------------
+
     category = "Unknown"
-    company_size = "Unknown"
 
-    if "ai" in website:
-        industry = "Artificial Intelligence"
-        category = "AI Software"
-        company_size = "1000+"
+    if "saas" in text:
+        category = "SaaS"
 
-    elif "tech" in website:
-        industry = "Technology"
-        category = "Software"
-        company_size = "500-1000"
+    elif "agency" in text:
+        category = "Agency"
 
-    elif "health" in website:
-        industry = "Healthcare"
-        category = "Health Services"
-        company_size = "200-500"
+    elif "startup" in text:
+        category = "Startup"
 
-    elif "finance" in website:
-        industry = "Finance"
-        category = "Financial Services"
-        company_size = "500-1000"
+    elif "consulting" in text:
+        category = "Consulting"
+
+    elif "manufacturer" in text:
+        category = "Manufacturing"
+
+    # ----------------------
+    # Verification
+    # ----------------------
+
+    verified = (
+        parsed_data.get("email") is not None and
+        parsed_data.get("phone") is not None
+    )
+
+    # ----------------------
+    # Confidence Score
+    # ----------------------
+
+    confidence = 0
+
+    if parsed_data.get("company_name"):
+        confidence += 15
+
+    if parsed_data.get("email"):
+        confidence += 20
+
+    if parsed_data.get("phone"):
+        confidence += 20
+
+    if parsed_data.get("linkedin"):
+        confidence += 20
+
+    if parsed_data.get("meta_description"):
+        confidence += 15
+
+    if industry != "Unknown":
+        confidence += 10
+
+    confidence = min(confidence, 100)
+
+    # ----------------------
+    # Lead Quality
+    # ----------------------
+
+    if confidence >= 80:
+        lead_quality = "High"
+
+    elif confidence >= 60:
+        lead_quality = "Medium"
+
+    else:
+        lead_quality = "Low"
 
     return {
-        "company_name": company_name,
-        "website": website,
+
         "industry": industry,
-        "business_category": category,
+
         "company_size": company_size,
-        "ai_summary": f"{company_name} operates in the {industry} industry.",
-        "confidence": 0.90
+
+        "business_category": category,
+
+        "verified": verified,
+
+        "confidence_score": confidence,
+
+        "lead_quality": lead_quality
     }

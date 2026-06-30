@@ -1,26 +1,30 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
 from services.enrichment_services import enrich_company
 
 router = APIRouter(
     prefix="/enrichment",
-    tags=["AI Enrichment"]
+    tags=["Lead Enrichment"]
 )
 
-class CompanyRequest(BaseModel):
-    company_name: str
-    website: str
 
+@router.get("/{lead_id}")
+def enrich_lead(lead_id: int):
 
-@router.post("/analyze")
-def analyze_company(data: CompanyRequest):
+    # Temporary parsed data
+    # Later this will come from the Parser API or PostgreSQL
+    parsed_data = {
+        "company_name": "OpenAI",
+        "title": "OpenAI",
+        "meta_description": "Artificial Intelligence Research Company",
+        "email": "info@openai.com",
+        "phone": "+1 123456789",
+        "linkedin": "https://linkedin.com/company/openai"
+    }
 
-    result = enrich_company(
-        data.company_name,
-        data.website
-    )
+    enrichment = enrich_company(parsed_data)
 
     return {
-        "message": "Company enriched successfully",
-        "data": result
+        "lead_id": lead_id,
+        "company": parsed_data["company_name"],
+        "enrichment": enrichment
     }
