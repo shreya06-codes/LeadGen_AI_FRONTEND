@@ -1,3 +1,5 @@
+
+import { login } from "../../api/auth";
 import { useState } from "react";
 import { Zap, ArrowRight, Shield, Sparkles, BarChart3 } from "lucide-react";
 
@@ -6,14 +8,28 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin }: LoginPageProps) {
-  const [loading, setLoading] = useState(false);
+const [loading, setLoading] = useState(false);
+const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setTimeout(() => { setLoading(false); onLogin(); }, 900);
-  };
+  try {
+    const result = await login(email, password);
 
+    // We'll use this later for JWT tokens or user info
+    console.log(result);
+
+    onLogin();
+
+  } catch (error) {
+    alert("Invalid email or password");
+    console.error(error);
+  }
+
+  setLoading(false);
+};
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: "#0F172A" }}>
       {/* Left panel */}
@@ -95,7 +111,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               <label className="block text-xs font-medium mb-1.5" style={{ color: "#0F172A" }}>Work Email</label>
               <input
                 type="email"
-                defaultValue="james@acmecorp.com"
+                value={email}
+onChange={(e) => setEmail(e.target.value)}
                 className="w-full h-10 px-3.5 rounded-lg text-sm focus:outline-none transition-colors"
                 style={{ border: "1px solid #E2E8F0", backgroundColor: "#FFFFFF", color: "#0F172A" }}
                 onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
@@ -110,7 +127,8 @@ export function LoginPage({ onLogin }: LoginPageProps) {
               </div>
               <input
                 type="password"
-                defaultValue="password"
+                value={password}
+onChange={(e) => setPassword(e.target.value)}
                 className="w-full h-10 px-3.5 rounded-lg text-sm focus:outline-none transition-colors"
                 style={{ border: "1px solid #E2E8F0", backgroundColor: "#FFFFFF", color: "#0F172A" }}
                 onFocus={(e) => (e.target.style.borderColor = "#2563EB")}

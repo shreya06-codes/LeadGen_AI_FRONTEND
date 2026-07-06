@@ -1,3 +1,4 @@
+import { startCrawler } from "../../api/crawler";
 import { useState, useEffect, useRef } from "react";
 import {
   Play, Pause, Square, RefreshCw, Plus, MoreHorizontal, Terminal,
@@ -8,7 +9,8 @@ import {
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar,
+  ResponsiveContainer, BarChart, Bar
+  ,
 } from "recharts";
 
 const C = {
@@ -188,6 +190,13 @@ export function CrawlPage() {
   const [ackedAlerts, setAckedAlerts] = useState<number[]>([2, 3]);
   const [showNewCrawl, setShowNewCrawl] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
+  
+  const [websiteUrl, setWebsiteUrl] = useState("");
+
+const [loading, setLoading] = useState(false);
+
+const [crawlResult, setCrawlResult] = useState<any>(null);
+const [crawlHistory, setCrawlHistory] = useState<any[]>([]);
 
   const running = jobs.filter((j) => j.status === "running").length;
   const failed = jobs.filter((j) => j.status === "failed").length;
@@ -202,9 +211,228 @@ export function CrawlPage() {
 
   const tooltipStyle = { backgroundColor: C.white, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 };
 
+const handleStartCrawler = async () => {
+  if (!websiteUrl) {
+    alert("Please enter a website URL");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const result = await startCrawler(websiteUrl);
+
+    console.log(result);
+
+    // Show beautiful result card
+  setCrawlResult(result);
+
+  setCrawlHistory((prev) => [
+    result,
+    ...prev,
+]);
+
+
+    setJobs((prev) => [
+      {
+        id: result.job.id.toString(),
+        name: result.job.title,
+        source: "Website",
+        target: result.job.url,
+        status: "completed",
+        progress: 100,
+        records: 1,
+        errors: 0,
+        speed: 0,
+        workers: 1,
+        started: "Just Now",
+        eta: "Done",
+        retries: 0,
+        priority: "medium",
+      },
+      ...prev,
+    ]);
+
+  } catch (error) {
+    console.error(error);
+    alert("Crawler Failed");
+  }
+
+  setLoading(false);
+};
   return (
     <div className="flex-1 overflow-y-auto" style={{ backgroundColor: C.bg }}>
       <div className="p-5 space-y-5 max-w-screen-2xl mx-auto">
+  {crawlResult && (
+  <div
+    className="rounded-xl p-6 mb-5"
+    style={{
+      backgroundColor: "#FFFFFF",
+      border: "1px solid #E2E8F0",
+      boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+    }}
+  >
+    <h2
+      className="text-xl font-bold mb-5"
+      style={{ color: "#10B981" }}
+    >
+      ✅ Crawl Completed Successfully
+    </h2>
+
+    <div className="grid grid-cols-2 gap-6">
+
+      <div>
+        <p className="text-xs text-gray-500">Company</p>
+        <p className="font-semibold">
+          {crawlResult.lead.company_name}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-500">Website</p>
+        <p className="font-semibold">
+          {crawlResult.lead.website}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-500">Status</p>
+        <p className="font-semibold text-green-600">
+          {crawlResult.job.status}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-500">HTTP Status</p>
+        <p className="font-semibold">
+          {crawlResult.job.status_code}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-500">Industry</p>
+        <p className="font-semibold">
+          {crawlResult.lead.industry}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-500">Company Size</p>
+        <p className="font-semibold">
+          {crawlResult.lead.company_size}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-500">Lead Quality</p>
+        <p className="font-semibold">
+          {crawlResult.lead.lead_quality}
+        </p>
+      </div>
+
+      <div>
+        <p className="text-xs text-gray-500">Priority</p>
+        <p className="font-semibold">
+          {crawlResult.score.priority}
+        </p>
+      </div>
+
+    </div>
+
+    <div className="mt-6">
+      <p className="text-sm font-semibold mb-2">
+        AI Lead Score
+      </p>
+
+      <div
+        className="w-full rounded-full h-4"
+        style={{ backgroundColor: "#E2E8F0" }}
+      >
+        <div
+          className="h-4 rounded-full"
+          style={{
+            width: `${crawlResult.score.lead_score}%`,
+            backgroundColor: "#2563EB",
+          }}
+        />
+      </div>
+
+      <p className="mt-2 font-bold text-lg">
+        {crawlResult.score.lead_score}/100
+      </p>
+    </div>
+
+    <div className="mt-6">
+      <p className="font-semibold mb-2">
+        AI Reasons
+      </p>
+
+      <ul className="list-disc ml-5">
+        {crawlResult.score.reasons.map(
+          (reason: string, index: number) => (
+            <li key={index}>{reason}</li>
+          )
+        )}
+      </ul>
+    </div>
+  </div>
+)}
+{crawlHistory.length > 0 && (
+  <div className="mt-8">
+
+    <h2 className="text-xl font-bold mb-4">
+      Recent Crawl Jobs
+    </h2>
+
+    <table className="w-full border rounded-lg overflow-hidden">
+
+      <thead className="bg-gray-100">
+        <tr>
+          <th className="p-3 text-left">ID</th>
+          <th className="p-3 text-left">Company</th>
+          <th className="p-3 text-left">Status</th>
+          <th className="p-3 text-left">Score</th>
+          <th className="p-3 text-left">Website</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {crawlHistory.map((item) => (
+
+          <tr
+            key={item.job.id}
+            className="border-t hover:bg-gray-50"
+          >
+
+            <td className="p-3">
+              {item.job.id}
+            </td>
+
+            <td className="p-3">
+              {item.lead.company_name}
+            </td>
+
+            <td className="p-3">
+              {item.job.status}
+            </td>
+
+            <td className="p-3">
+              {item.score.lead_score}
+            </td>
+
+            <td className="p-3">
+              {item.lead.website}
+            </td>
+
+          </tr>
+
+        ))}
+      </tbody>
+
+    </table>
+
+  </div>
+)}
 
         {/* ── Header ─────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -260,16 +488,28 @@ export function CrawlPage() {
               style={{ borderColor: C.border, color: C.muted, backgroundColor: C.white }}>
               <RefreshCw className="w-3.5 h-3.5" /> Refresh
             </button>
-            <button
-              onClick={() => setShowNewCrawl(true)}
-              className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold transition-colors"
-              style={{ backgroundColor: C.primary, color: "#fff" }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1D4ED8")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = C.primary)}>
-              <Plus className="w-3.5 h-3.5" /> Schedule Crawl
-            </button>
-          </div>
-        </div>
+            <input
+  type="text"
+  placeholder="https://example.com"
+  value={websiteUrl}
+  onChange={(e) => setWebsiteUrl(e.target.value)}
+  className="h-9 w-72 px-3 rounded-lg border text-sm outline-none"
+  style={{
+    borderColor: C.border,
+    backgroundColor: C.white,
+    color: C.text,
+  }}
+/>
+           <button
+  onClick={handleStartCrawler}
+  className="flex items-center gap-1.5 h-9 px-4 rounded-lg text-sm font-semibold transition-colors"
+  style={{ backgroundColor: C.primary, color: "#fff" }}
+  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1D4ED8")}
+  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = C.primary)}
+>
+  <Plus className="w-3.5 h-3.5" />
+  Start Crawl
+</button>
 
         {/* ── KPI strip ──────────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
@@ -727,6 +967,7 @@ export function CrawlPage() {
                         <button className="flex items-center gap-1 text-xs font-medium hover:underline" style={{ color: C.muted }}>
                           <Eye className="w-3 h-3" /> View logs
                         </button>
+
                       </div>
                     )}
                   </div>
@@ -737,5 +978,8 @@ export function CrawlPage() {
         </div>
       </div>
     </div>
+    </div>
+    </div>
+
   );
 }

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { getLeads } from "../../api/leadApi";
+import { useEffect, useState } from "react";
 import {
   Search,
   SlidersHorizontal,
@@ -85,14 +86,40 @@ export function LeadsPage({ onViewLead }: LeadsPageProps) {
   const [savedMap, setSavedMap] = useState<Record<number, boolean>>(
     Object.fromEntries(LEADS.map((l) => [l.id, l.saved]))
   );
+  const [backendLeads, setBackendLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState([]);
+  
+  const loadLeads = async () => {
+  
 
-  const filtered = LEADS.filter((l) => {
-    const q = query.toLowerCase();
-    const matchQ = !q || l.company.toLowerCase().includes(q) || l.contact.toLowerCase().includes(q) || l.role.toLowerCase().includes(q);
-    const matchI = selectedIndustry === "All" || l.industry === selectedIndustry;
-    const matchS = selectedStatus === "All" || l.status === selectedStatus;
-    return matchQ && matchI && matchS;
-  });
+  try {
+    const data = await getLeads();
+
+    console.log(data);
+
+    setBackendLeads(data);
+  } catch (error) {
+    console.error(error);
+  }
+
+
+};
+
+useEffect(() => {
+  loadLeads();
+}, []);
+  
+
+ const filtered = backendLeads.filter((l: any) => {
+  const q = query.toLowerCase();
+
+  const matchQ =
+    !q ||
+    (l.company_name ?? "").toLowerCase().includes(q) ||
+    (l.website ?? "").toLowerCase().includes(q);
+
+  return matchQ;
+});
 
   const toggleSelect = (id: number) => setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]);
   const allSelected = filtered.length > 0 && filtered.every((l) => selected.includes(l.id));
@@ -316,22 +343,24 @@ export function LeadsPage({ onViewLead }: LeadsPageProps) {
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                         style={{ backgroundColor: C.primary }}
                       >
-                        {lead.company[0]}
+                        {lead.company_name?.[0] || "?"}
                       </div>
                       <div>
-                        <p className="font-medium" style={{ color: C.text }}>{lead.company}</p>
+                        <p className="font-medium" style={{ color: C.text }}>{lead.company_name}</p>
                         <p className="text-xs" style={{ color: C.muted }}>{lead.website}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5">
-                    <p className="font-medium" style={{ color: C.text }}>{lead.contact}</p>
-                    <p className="text-xs" style={{ color: C.muted }}>{lead.role}</p>
-                  </td>
+                  <p className="font-medium" style={{ color: C.text }}>
+                      Score: {lead.score}
+                  </p>
+                  <p className="text-xs" style={{ color: C.muted }}>
+                      {lead.lead_quality}
+                  </p>
                   <td className="px-4 py-3.5">
                     <div className="flex items-center gap-1.5 text-xs" style={{ color: C.muted }}>
                       <MapPin className="w-3 h-3 flex-shrink-0" />
-                      {lead.location}
+                         {lead.company_size}
                     </div>
                   </td>
                   <td className="px-4 py-3.5">
@@ -339,7 +368,7 @@ export function LeadsPage({ onViewLead }: LeadsPageProps) {
                       {lead.industry}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5 text-xs" style={{ color: C.muted }}>{lead.employees}</td>
+                  <td className="px-4 py-3.5 text-xs" style={{ color: C.muted }}>{lead.lead_quality}</td>
                   <td className="px-4 py-3.5"><ScoreBadge score={lead.score} /></td>
                   <td className="px-4 py-3.5"><StatusBadge status={lead.status} /></td>
                   <td className="px-4 py-3.5">
