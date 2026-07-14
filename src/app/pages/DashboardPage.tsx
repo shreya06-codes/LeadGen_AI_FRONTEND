@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getLeads } from "../../api/leadApi";
 import {
   TrendingUp,
   Users,
@@ -51,37 +52,13 @@ const areaData = [
   { month: "Aug", leads: 4200, enriched: 3500 },
 ];
 
-const barData = [
-  { name: "SaaS", value: 34 },
-  { name: "FinTech", value: 22 },
-  { name: "HealthTech", value: 18 },
-  { name: "E-comm", value: 14 },
-  { name: "Other", value: 12 },
-];
 
-const pieData = [
-  { name: "Hot", value: 28, color: C.error },
-  { name: "Warm", value: 42, color: C.warning },
-  { name: "Cold", value: 30, color: C.muted },
-];
 
-const recentLeads = [
-  { id: 1, company: "Stripe Inc.", contact: "Alex Martinez", role: "VP of Engineering", score: 94, status: "Hot", industry: "FinTech", location: "San Francisco, CA" },
-  { id: 2, company: "Notion Labs", contact: "Sarah Chen", role: "Head of Growth", score: 87, status: "Hot", industry: "SaaS", location: "San Francisco, CA" },
-  { id: 3, company: "Figma", contact: "Jordan Lee", role: "Director of Sales", score: 81, status: "Warm", industry: "SaaS", location: "New York, NY" },
-  { id: 4, company: "Vercel", contact: "Marcus Johnson", role: "CTO", score: 76, status: "Warm", industry: "Infrastructure", location: "Remote" },
-  { id: 5, company: "Linear", contact: "Emma Wilson", role: "CEO", score: 69, status: "Warm", industry: "SaaS", location: "San Francisco, CA" },
-  { id: 6, company: "Loom Inc.", contact: "David Park", role: "SVP Sales", score: 55, status: "Cold", industry: "SaaS", location: "Austin, TX" },
-];
 
-const aiInsights = [
-  { icon: TrendingUp, color: C.success, text: "SaaS leads from Series B companies show 3.2× higher conversion this quarter." },
-  { icon: Brain, color: C.purple, text: "Recommended outreach window: Tuesday–Thursday 9–11am for VP-level contacts." },
-  { icon: Target, color: C.primary, text: "FinTech segment growing 40% MoM — 847 new companies eligible for enrichment." },
-];
 
 function StatCard({ label, value, delta, deltaLabel, icon: Icon, iconColor, trend }: any) {
   const up = trend === "up";
+  
   return (
     <div style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }} className="rounded-xl p-5">
       <div className="flex items-start justify-between mb-4">
@@ -136,22 +113,148 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 interface DashboardPageProps {
-  onViewLead: () => void;
-  onNavigate: (page: any) => void;
+   onViewLead: (leadId: number) => void;
+   onNavigate: (page: any) => void;
 }
 
 export function DashboardPage({ onViewLead, onNavigate }: DashboardPageProps) {
+
+  const [leads, setLeads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        const data = await getLeads();
+        setLeads(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeads();
+  }, []);
+  const totalLeads = leads.length;
+
+const newLeads = leads.filter(
+  (lead) => lead.status === "New"
+).length;
+
+const highQualityLeads = leads.filter(
+  (lead) => lead.lead_quality === "High"
+).length;
+
+const averageScore =
+  leads.length > 0
+    ? Math.round(
+        leads.reduce((sum, lead) => sum + (lead.score || 0), 0) /
+          leads.length
+      )
+    : 0;
+ const recentLeads = leads.slice(0, 6).map((lead) => ({
+  id: lead.id,
+  company: lead.company_name,
+  contact: lead.email || "Not Available",
+  role: lead.industry || "Unknown",
+  score: lead.score,
+  status: lead.lead_quality,
+  industry: lead.industry,
+  location: lead.website || "N/A",
+}));   
+
+const pieData = [
+  {
+    name: "High",
+    value: leads.filter((lead) => lead.lead_quality === "High").length,
+    color: C.success,
+  },
+  {
+    name: "Medium",
+    value: leads.filter((lead) => lead.lead_quality === "Medium").length,
+    color: C.warning,
+  },
+  {
+    name: "Low",
+    value: leads.filter((lead) => lead.lead_quality === "Low").length,
+    color: C.error,
+  },
+];
+
+const aiInsights = [
+  {
+    icon: TrendingUp,
+    color: C.success,
+    text: `Total Leads Generated: ${leads.length}`,
+  },
+  {
+    icon: Brain,
+    color: C.purple,
+    text: `${leads.filter(l => l.status === "New").length} new leads are ready for outreach.`,
+  },
+  {
+    icon: Target,
+    color: C.primary,
+    text: `${leads.filter(l => l.lead_quality === "High").length} high-quality leads identified.`,
+  },
+];
+
+const industryCount = leads.reduce((acc: Record<string, number>, lead: any) => {
+  const industry = lead.industry || "Unknown";
+  acc[industry] = (acc[industry] || 0) + 1;
+  return acc;
+}, {});
+
+const barData = Object.entries(industryCount).map(([name, value]) => ({
+  name,
+  value,
+}));
   return (
     <div className="flex-1 overflow-y-auto" style={{ backgroundColor: C.bg }}>
       <div className="p-6 space-y-6 max-w-screen-2xl mx-auto">
 
-        {/* Stats row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Total Leads" value="124,832" delta="12.4%" deltaLabel="vs last month" icon={Users} iconColor={C.primary} trend="up" />
-          <StatCard label="AI Score Avg." value="78.3" delta="3.1%" deltaLabel="vs last month" icon={Brain} iconColor={C.purple} trend="up" />
-          <StatCard label="Enriched Today" value="3,241" delta="8.7%" deltaLabel="vs yesterday" icon={Zap} iconColor={C.success} trend="up" />
-          <StatCard label="Conversion Rate" value="6.8%" delta="0.4%" deltaLabel="vs last month" icon={Target} iconColor={C.warning} trend="down" />
-        </div>
+  <StatCard
+    label="Total Leads"
+    value={totalLeads.toString()}
+    delta={`${newLeads} New`}
+    deltaLabel="Available Leads"
+    icon={Users}
+    iconColor={C.primary}
+    trend="up"
+  />
+
+  <StatCard
+    label="AI Score Avg."
+    value={averageScore.toString()}
+    delta={`${highQualityLeads} High Quality`}
+    deltaLabel="Qualified Leads"
+    icon={Brain}
+    iconColor={C.purple}
+    trend="up"
+  />
+
+  <StatCard
+    label="High Quality"
+    value={highQualityLeads.toString()}
+    delta="AI Qualified"
+    deltaLabel="Lead Quality"
+    icon={Zap}
+    iconColor={C.success}
+    trend="up"
+  />
+
+  <StatCard
+    label="New Leads"
+    value={newLeads.toString()}
+    delta="Recently Added"
+    deltaLabel="Status"
+    icon={Target}
+    iconColor={C.warning}
+    trend="up"
+  />
+</div>
 
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -235,10 +338,11 @@ export function DashboardPage({ onViewLead, onNavigate }: DashboardPageProps) {
               style={{ backgroundColor: C.white, border: `1px solid ${C.border}` }}
             >
               <h3 className="text-sm font-semibold mb-4" style={{ color: C.text }}>By Industry</h3>
-              <ResponsiveContainer width="100%" height={110}>
-                <BarChart data={barData} layout="vertical" margin={{ left: -10, right: 10 }}>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={barData} layout="vertical" margin={{ left: 60, right: 20, top: 10, bottom: 10 }}
+>
                   <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: C.muted }} axisLine={false} tickLine={false} width={55} />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: C.muted }} axisLine={false} tickLine={false} width={60} />
                   <Tooltip
                     contentStyle={{ backgroundColor: C.white, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 }}
                     cursor={{ fill: `${C.primary}08` }}
@@ -318,14 +422,14 @@ export function DashboardPage({ onViewLead, onNavigate }: DashboardPageProps) {
                 </tr>
               </thead>
               <tbody>
-                {recentLeads.map((lead) => (
+                {leads.slice(0, 6).map((lead) => (
                   <tr
                     key={lead.id}
                     className="group cursor-pointer transition-colors"
                     style={{ borderBottom: `1px solid ${C.border}` }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#F8FAFC")}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
-                    onClick={onViewLead}
+                    onClick={() => onViewLead(lead.id)}
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2.5">
@@ -333,16 +437,14 @@ export function DashboardPage({ onViewLead, onNavigate }: DashboardPageProps) {
                           className="w-7 h-7 rounded-md flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                           style={{ backgroundColor: C.primary }}
                         >
-                          {lead.company[0]}
+                          {lead.company_name?.charAt(0) || "?"}
                         </div>
-                        <span className="text-sm font-medium" style={{ color: C.text }}>{lead.company}</span>
+                        <span className="text-sm font-medium" style={{ color: C.text }}></span>{lead.company_name}
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-sm" style={{ color: C.text }}>{lead.contact}</td>
-                    <td className="px-5 py-3.5 text-sm" style={{ color: C.muted }}>{lead.role}</td>
-                    <td className="px-5 py-3.5 text-sm" style={{ color: C.muted }}>{lead.industry}</td>
-                    <td className="px-5 py-3.5"><ScoreBadge score={lead.score} /></td>
-                    <td className="px-5 py-3.5"><StatusBadge status={lead.status} /></td>
+                    <td className="px-5 py-3.5 text-sm" style={{ color: C.text }}>{lead.email || "N/A"}</td>
+                    <td className="px-5 py-3.5 text-sm" style={{ color: C.muted }}>{lead.company_size || "N/A"}</td>
+              
                     <td className="px-5 py-3.5">
                       <button className="opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: C.muted }}>
                         <ExternalLink className="w-3.5 h-3.5" />

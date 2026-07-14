@@ -72,9 +72,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 interface LeadsPageProps {
-  onViewLead: () => void;
+  onViewLead: (id: number) => void;
 }
-
 export function LeadsPage({ onViewLead }: LeadsPageProps) {
   const [query, setQuery] = useState("");
   const [selectedIndustry, setSelectedIndustry] = useState("All");
@@ -327,7 +326,7 @@ useEffect(() => {
                   style={{ borderBottom: `1px solid ${C.border}`, backgroundColor: selected.includes(lead.id) ? `${C.primary}06` : C.white }}
                   onMouseEnter={(e) => { if (!selected.includes(lead.id)) e.currentTarget.style.backgroundColor = C.bg; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = selected.includes(lead.id) ? `${C.primary}06` : C.white; }}
-                  onClick={onViewLead}
+                  onClick={() => onViewLead(lead)}
                 >
                   <td className="px-4 py-3.5" onClick={(e) => { e.stopPropagation(); toggleSelect(lead.id); }}>
                     <input

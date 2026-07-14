@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getLead } from "../../api/leadApi";
 import {
   ArrowLeft, Globe, Linkedin, Twitter, Mail, Phone, MapPin, Users,
   Building2, TrendingUp, Brain, Star, Download, Send, Clock,
@@ -101,43 +102,6 @@ const techStack = {
   ],
 };
 
-const aiInsights = [
-  {
-    icon: CheckCircle2,
-    color: C.success,
-    label: "Decision Maker Access",
-    text: "Alex Martinez (VP Engineering) has confirmed budget authority for developer tooling — Q3 spend cycle opens July 15.",
-    confidence: 94,
-  },
-  {
-    icon: TrendingUp,
-    color: C.primary,
-    label: "Funding Signal",
-    text: "Stripe raised $600M Series I in March — 87% of similar-stage companies expand infrastructure tooling within 90 days of raise.",
-    confidence: 87,
-  },
-  {
-    icon: Flame,
-    color: C.warning,
-    label: "Buying Intent",
-    text: "3 Stripe engineers actively researching 'API developer experience' and 'observability tooling' on G2 and Product Hunt.",
-    confidence: 81,
-  },
-  {
-    icon: AlertCircle,
-    color: "#F97316",
-    label: "Competitor Alert",
-    text: "Stripe recently renewed Datadog contract but expressed dissatisfaction on LinkedIn — window for alternative pitch is open.",
-    confidence: 76,
-  },
-  {
-    icon: Brain,
-    color: C.purple,
-    label: "Outreach Strategy",
-    text: "Lead with API reliability angle. Reference their recent blog post on 'developer-first infrastructure'. Best send: Tue–Thu 9–11am PT.",
-    confidence: 92,
-  },
-];
 
 const notes = [
   { id: 1, author: "James Doe", initials: "JD", color: C.primary, time: "2 hours ago", text: "Alex mentioned they're evaluating alternatives in Q3. Follow up with the enterprise case study deck." },
@@ -199,21 +163,85 @@ function ConfidenceDot({ score }: { score: number }) {
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
-
 interface LeadDetailPageProps {
+  leadId: number | null;
   onBack: () => void;
 }
 
+
 type Tab = "overview" | "contacts" | "insights" | "activity";
 
-export function LeadDetailPage({ onBack }: LeadDetailPageProps) {
+ export function LeadDetailPage({ leadId, onBack }: LeadDetailPageProps) {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [saved, setSaved] = useState(false);
   const [tags, setTags] = useState(TAGS);
   const [noteText, setNoteText] = useState("");
   const [allNotes, setAllNotes] = useState(notes);
   const [addingTag, setAddingTag] = useState(false);
-  const [newTag, setNewTag] = useState("");
+  const [newTagexport, setNewTag] = useState("");
+  const [lead, setLead] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+  if (!leadId) return;
+
+  const fetchLead = async () => {
+    try {
+      setLoading(true);
+      const data = await getLead(leadId);
+      setLead(data);
+    } catch (error) {
+      console.error("Failed to fetch lead:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchLead();
+}, [leadId]);
+if (loading) {
+  return (
+    <div className="p-6">
+      Loading lead details...
+    </div>
+  );
+}
+  const aiInsights = [
+  {
+    icon: Brain,
+    color: C.primary,
+    label: "Lead Score",
+    text: `AI evaluated this company with a score of ${lead?.score || 0}.`,
+    confidence: lead?.score || 0,
+  },
+  {
+    icon: TrendingUp,
+    color: C.success,
+    label: "Industry",
+    text: `Industry detected: ${lead?.industry || "Unknown"}.`,
+    confidence: 90,
+  },
+  {
+    icon: Building2,
+    color: C.warning,
+    label: "Company Size",
+    text: `Estimated company size: ${lead?.company_size || "Unknown"}.`,
+    confidence: 85,
+  },
+  {
+    icon: CheckCircle2,
+    color: C.teal,
+    label: "Lead Quality",
+    text: `Overall lead quality is ${lead?.lead_quality || "Unknown"}.`,
+    confidence: 80,
+  },
+  {
+    icon: Globe,
+    color: C.purple,
+    label: "Website",
+    text: lead?.website || "Website not available.",
+    confidence: 100,
+  },
+];
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "overview", label: "Overview" },
@@ -270,7 +298,7 @@ export function LeadDetailPage({ onBack }: LeadDetailPageProps) {
 
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <h2 className="font-bold text-xl" style={{ color: C.text }}>Stripe Inc.</h2>
+                    <h2 className="font-bold text-xl" style={{ color: C.text }}>{lead?.company_name} Inc.</h2>
 
                     {/* AI Score badge */}
                     <div
@@ -300,14 +328,35 @@ export function LeadDetailPage({ onBack }: LeadDetailPageProps) {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-4 mt-1.5 flex-wrap text-sm" style={{ color: C.muted }}>
-                    <span className="flex items-center gap-1"><Building2 className="w-3.5 h-3.5" /> FinTech</span>
-                    <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> San Francisco, CA</span>
-                    <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> 4,000+ employees</span>
-                    <a href="https://stripe.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline" style={{ color: C.primary }}>
-                      <Globe className="w-3.5 h-3.5" /> stripe.com
-                    </a>
-                  </div>
+                 <div
+  className="flex items-center gap-4 mt-1.5 flex-wrap text-sm"
+  style={{ color: C.muted }}
+>
+  <span className="flex items-center gap-1">
+    <Building2 className="w-3.5 h-3.5" />
+    {lead?.industry || "Unknown"}
+  </span>
+
+  <span className="flex items-center gap-1">
+    <Users className="w-3.5 h-3.5" />
+    {lead?.company_size || "Unknown"}
+  </span>
+
+  <span className="flex items-center gap-1">
+    ⭐ Score: {lead?.score || 0}
+  </span>
+
+  <a
+    href={lead?.website || "#"}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="flex items-center gap-1 hover:underline"
+    style={{ color: C.primary }}
+  >
+    <Globe className="w-3.5 h-3.5" />
+    {lead?.website || "No Website"}
+  </a>
+</div>
                 </div>
               </div>
             </div>
@@ -395,51 +444,59 @@ export function LeadDetailPage({ onBack }: LeadDetailPageProps) {
                 <Card>
                   <SectionHeader title="Company Overview" subtitle="Enriched from 200+ data sources" />
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
-                    {[
-                      { label: "Founded", value: "2010" },
-                      { label: "Headquarters", value: "San Francisco, CA" },
-                      { label: "Revenue (est.)", value: "$14.4B ARR" },
-                      { label: "Funding Total", value: "$2.2B raised" },
-                      { label: "Last Round", value: "Series I · $600M" },
-                      { label: "Valuation", value: "$50B+" },
-                      { label: "Employees", value: "4,000+" },
-                      { label: "Growth (YoY)", value: "+38%" },
-                      { label: "CEO", value: "Patrick Collison" },
-                    ].map(({ label, value }) => (
-                      <div key={label}>
-                        <p className="text-xs font-medium uppercase tracking-wide" style={{ color: C.muted }}>{label}</p>
-                        <p className="text-sm font-semibold mt-1" style={{ color: C.text }}>{value}</p>
-                      </div>
-                    ))}
-                  </div>
+                   {[
+                      { label: "Company", value: lead?.company_name || "Unknown" },
+                      { label: "Website", value: lead?.website || "N/A" },
+                      { label: "Industry", value: lead?.industry || "Unknown" },
+                      { label: "Company Size", value: lead?.company_size || "Unknown" },
+                      { label: "Lead Score", value: lead?.score || "0" },
+                      { label: "Lead Quality", value: lead?.lead_quality || "Unknown" },
+                      { label: "Status", value: lead?.status || "New" },
+                      { label: "Phone", value: lead?.phone || "Not Available" },
+                      { label: "Email", value: lead?.email || "Not Available" },
+  ].map(({ label, value }) => (
+    <div key={label}>
+      <p
+        className="text-xs font-medium uppercase tracking-wide"
+        style={{ color: C.muted }}
+      >
+        {label}
+      </p>
+
+      <p
+        className="text-sm font-semibold mt-1"
+        style={{ color: C.text }}
+      >
+        {value}
+      </p>
+    </div>
+    
+  ))}
+</div>
 
                   <Divider />
                   <div className="mt-4">
                     <p className="text-xs font-medium uppercase tracking-wide mb-2" style={{ color: C.muted }}>Description</p>
                     <p className="text-sm leading-relaxed" style={{ color: C.textSec }}>
-                      Stripe is a technology company that builds economic infrastructure for the internet. Businesses of every size — from startups to Fortune 500 companies — use Stripe's software and APIs to accept payments, send payouts, and manage their businesses online.
+                    {lead?.company_name} was discovered using the AI Lead Generation crawler.
+                    Company information shown below is enriched automatically from the crawl
+                  results and backend enrichment service.
                     </p>
                   </div>
 
                   <Divider />
-                  <div className="mt-4 flex items-center gap-5 flex-wrap">
-                    {[
-                      { icon: Globe, label: "stripe.com", href: "#" },
-                      { icon: Linkedin, label: "LinkedIn", href: "#" },
-                      { icon: Twitter, label: "@stripe", href: "#" },
-                    ].map(({ icon: Icon, label, href }) => (
-                      <a
-                        key={label}
-                        href={href}
-                        onClick={(e) => e.preventDefault()}
-                        className="flex items-center gap-1.5 text-sm font-medium hover:underline"
-                        style={{ color: C.primary }}
-                      >
-                        <Icon className="w-4 h-4" />
-                        {label}
-                      </a>
-                    ))}
-                  </div>
+              <div className="mt-4 flex items-center gap-5 flex-wrap">
+                 <a
+                 href={lead?.website || "#"}
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 className="flex items-center gap-1.5 text-sm font-medium hover:underline"
+                 style={{ color: C.primary }}
+                 >
+                <Globe className="w-4 h-4" />
+                {lead?.website || "No Website"}
+                 </a>
+</div>
                 </Card>
 
                 {/* Tech stack */}
@@ -680,8 +737,16 @@ export function LeadDetailPage({ onBack }: LeadDetailPageProps) {
                   </div>
                   <div className="space-y-2.5">
                     {[
-                      { icon: Mail, label: "alex@stripe.com", verified: true },
-                      { icon: Phone, label: "+1 (415) 555-0182", verified: false },
+                      {
+                        icon: Mail,
+                        label: lead?.email || "Email not available",
+                        verified: !!lead?.email,
+},
+                      {
+                        icon: Phone,
+                        label: lead?.phone || "Phone not available",
+                        verified: !!lead?.phone,
+                      },
                       { icon: Linkedin, label: "linkedin.com/in/alexm", verified: false },
                     ].map(({ icon: Icon, label, verified }) => (
                       <div key={label} className="flex items-center gap-2 text-xs group">
@@ -781,40 +846,7 @@ export function LeadDetailPage({ onBack }: LeadDetailPageProps) {
             </div>
           )}
 
-          {/* AI INSIGHTS TAB */}
-          {activeTab === "insights" && (
-            <div className="space-y-4">
-              {/* Model banner */}
-              <div
-                className="rounded-xl p-5 flex items-center gap-5 flex-wrap"
-                style={{ background: `linear-gradient(135deg, ${C.navy} 0%, #1E293B 100%)` }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${C.purple}30` }}>
-                    <Brain className="w-5 h-5" style={{ color: "#C4B5FD" }} />
-                  </div>
-                  <div>
-                    <p className="text-white font-semibold text-sm">Aurxon AI Engine</p>
-                    <p className="text-xs" style={{ color: "#94A3B8" }}>Analysis generated 2 hours ago · Model v3.2</p>
-                  </div>
-                </div>
-                <div className="flex gap-6 flex-wrap">
-                  {[
-                    { label: "Match Score", value: "94/100" },
-                    { label: "Intent Level", value: "Very High" },
-                    { label: "Confidence", value: "92%" },
-                  ].map(({ label, value }) => (
-                    <div key={label}>
-                      <p className="text-xs" style={{ color: "#94A3B8" }}>{label}</p>
-                      <p className="text-white font-bold text-sm">{value}</p>
-                    </div>
-                  ))}
-                </div>
-                <button className="ml-auto flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg" style={{ backgroundColor: "#ffffff18", color: "#fff" }}>
-                  <RefreshCw className="w-3.5 h-3.5" /> Refresh analysis
-                </button>
-              </div>
-
+   
               {/* Insights cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {aiInsights.map(({ icon: Icon, color, label, text, confidence }) => (
@@ -884,7 +916,24 @@ export function LeadDetailPage({ onBack }: LeadDetailPageProps) {
                 </div>
               </Card>
             </div>
-          )}
+        
+{/* AI INSIGHTS TAB */}
+{activeTab === "insights" && (
+  <Card>
+    <SectionHeader
+      title="AI Insights"
+      subtitle="Generated from backend data"
+    />
+
+    <div className="space-y-4">
+      <div><strong>Lead Score:</strong> {lead?.score}</div>
+      <div><strong>Industry:</strong> {lead?.industry}</div>
+      <div><strong>Company Size:</strong> {lead?.company_size}</div>
+      <div><strong>Lead Quality:</strong> {lead?.lead_quality}</div>
+      <div><strong>Website:</strong> {lead?.website}</div>
+    </div>
+  </Card>
+)}
 
           {/* ACTIVITY TAB */}
           {activeTab === "activity" && (
@@ -927,6 +976,6 @@ export function LeadDetailPage({ onBack }: LeadDetailPageProps) {
           )}
         </div>
       </div>
-    </div>
+    
   );
 }

@@ -1,4 +1,9 @@
-import { startCrawler } from "../../api/crawler";
+import {
+  getCrawlStats,
+  getCrawlHistory,
+  getCrawlStatus,
+  startCrawl,
+} from "../../api/leadApi";
 import { useState, useEffect, useRef } from "react";
 import {
   Play, Pause, Square, RefreshCw, Plus, MoreHorizontal, Terminal,
@@ -184,7 +189,7 @@ function LogLine({ ts, level, tag, msg }: { ts: string; level: string; tag: stri
 // ─── Page ──────────────────────────────────────────────────────────────────
 
 export function CrawlPage() {
-  const [jobs, setJobs] = useState(CRAWL_JOBS);
+  const [jobs, setJobs] = useState<any[]>([]);
   const [logsLive, setLogsLive] = useState(true);
   const [logFilter, setLogFilter] = useState<"all" | "INFO" | "WARN" | "ERROR" | "DEBUG">("all");
   const [ackedAlerts, setAckedAlerts] = useState<number[]>([2, 3]);
@@ -193,10 +198,33 @@ export function CrawlPage() {
   
   const [websiteUrl, setWebsiteUrl] = useState("");
 
-const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-const [crawlResult, setCrawlResult] = useState<any>(null);
-const [crawlHistory, setCrawlHistory] = useState<any[]>([]);
+  const [crawlResult, setCrawlResult] = useState<any>(null);
+  const [crawlHistory, setCrawlHistory] = useState<any[]>([]);
+  const [crawlStats, setCrawlStats] = useState<any>(null);
+  const [crawlStatus, setCrawlStatus] = useState<any>(null);
+
+useEffect(() => {
+  loadCrawlData();
+}, []);
+
+const loadCrawlData = async () => {
+  try {
+    const stats = await getCrawlStats();
+    const history = await getCrawlHistory();
+    const status = await getCrawlStatus();
+
+    setCrawlStats(stats);
+    setCrawlHistory(history); // Uses your existing state
+    setCrawlStatus(status);
+    
+    setJobs(history);
+
+  } catch (error) {
+    console.error(error);
+  }
+};
 
   const running = jobs.filter((j) => j.status === "running").length;
   const failed = jobs.filter((j) => j.status === "failed").length;
@@ -220,7 +248,7 @@ const handleStartCrawler = async () => {
   setLoading(true);
 
   try {
-    const result = await startCrawler(websiteUrl);
+    const result = await startCrawl(websiteUrl);
 
     console.log(result);
 

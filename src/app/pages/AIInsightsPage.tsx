@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getLeads } from "../../api/leadApi";
 import {
   Brain, TrendingUp, Target, Sparkles, Download, Calendar,
   Users, Zap, CheckCircle2, AlertCircle, ArrowUpRight, ArrowDownRight,
@@ -42,25 +43,9 @@ const leadGrowthData = [
   { month: "Aug", discovered: 24800, enriched: 20100, converted: 1640 },
 ];
 
-const industryData = [
-  { name: "SaaS", value: 34, leads: 42340, growth: "+28%" },
-  { name: "FinTech", value: 22, leads: 27412, growth: "+41%" },
-  { name: "HealthTech", value: 14, leads: 17480, growth: "+19%" },
-  { name: "Infrastructure", value: 11, leads: 13720, growth: "+33%" },
-  { name: "E-commerce", value: 9, leads: 11230, growth: "+12%" },
-  { name: "Other", value: 10, leads: 12650, growth: "+8%" },
-];
-
 const industryColors = [C.primary, C.success, C.purple, C.teal, C.warning, C.muted];
 
-const scoreDistData = [
-  { range: "90–100", count: 3842, label: "Prime" },
-  { range: "80–89", count: 8920, label: "Hot" },
-  { range: "70–79", count: 15340, label: "Warm" },
-  { range: "60–69", count: 22180, label: "Moderate" },
-  { range: "50–59", count: 18420, label: "Low" },
-  { range: "<50", count: 11130, label: "Cold" },
-];
+
 
 const enrichmentData = [
   { week: "W1", rate: 78 },
@@ -81,15 +66,7 @@ const geoData = [
   { region: "Middle East & Africa", leads: 6370, pct: 5 },
 ];
 
-const activityFeed = [
-  { id: 1, type: "crawl", icon: Globe, color: C.primary, title: "LinkedIn Sales Navigator crawl completed", detail: "Discovered 2,341 new leads · 18% above expected yield", time: "2 min ago", badge: "Success" },
-  { id: 2, type: "alert", icon: AlertCircle, color: C.warning, title: "Enrichment hit rate drop detected", detail: "HealthTech segment dropped 6% — possible data source outage", time: "14 min ago", badge: "Alert" },
-  { id: 3, type: "verify", icon: CheckCircle2, color: C.success, title: "Bulk email verification complete", detail: "4,820 contacts verified · 87.3% deliverability rate", time: "31 min ago", badge: "Done" },
-  { id: 4, type: "insight", icon: Brain, color: C.purple, title: "New AI pattern detected", detail: "Series B FinTech companies show 3.2× higher intent this week", time: "1 hr ago", badge: "Insight" },
-  { id: 5, type: "score", icon: TrendingUp, color: C.success, title: "Score model retrained", detail: "Model v3.3 deployed · avg accuracy improved from 91% → 94%", time: "2 hr ago", badge: "Updated" },
-  { id: 6, type: "anomaly", icon: Zap, color: C.error, title: "Unusual traffic spike on Crunchbase crawl", detail: "Rate-limit encountered — crawl auto-throttled, resuming in 8 min", time: "3 hr ago", badge: "Warning" },
-  { id: 7, type: "new", icon: Sparkles, color: C.teal, title: "1,204 new leads added to pipeline", detail: "Source: ProductHunt + AngelList batch job", time: "4 hr ago", badge: "New" },
-];
+
 
 const teamMembers = [
   { name: "James Doe", initials: "JD", color: C.primary, role: "Growth Lead", searches: 48, exports: 12, outreach: 34, saved: 89, score: 96 },
@@ -98,44 +75,6 @@ const teamMembers = [
   { name: "Priya Gupta", initials: "PG", color: C.warning, role: "Account Exec", searches: 27, exports: 14, outreach: 43, saved: 52, score: 79 },
 ];
 
-const recommendations = [
-  {
-    icon: Flame,
-    color: C.error,
-    badge: "High Opportunity",
-    title: "FinTech Series B+ companies surging",
-    body: "847 new companies entered growth stage this month. Historical data shows 3.2× higher conversion vs baseline. Recommend targeting VP Engineering and CTO roles.",
-    action: "Create segment",
-    confidence: 94,
-  },
-  {
-    icon: Clock,
-    color: C.primary,
-    badge: "Timing Signal",
-    title: "Outreach window: Tue–Thu 9–11am",
-    body: "AI analysis of 18,000+ email interactions confirms VP-level contacts respond 47% more on Tuesday and Wednesday mornings. Schedule campaigns accordingly.",
-    action: "Schedule campaign",
-    confidence: 89,
-  },
-  {
-    icon: TrendingUp,
-    color: C.success,
-    badge: "Growth Trend",
-    title: "Infrastructure segment growing 33% MoM",
-    body: "Cloud infrastructure companies are hiring 40% more SDRs and engineers — strong buying intent signal. 2,140 companies newly eligible for outreach.",
-    action: "View leads",
-    confidence: 86,
-  },
-  {
-    icon: AlertCircle,
-    color: C.warning,
-    badge: "Data Quality",
-    title: "28 high-score leads need re-enrichment",
-    body: "These leads are 90+ days old and show 62% lower accuracy. Re-enriching now will preserve pipeline quality and prevent outreach to stale contacts.",
-    action: "Re-enrich now",
-    confidence: 98,
-  },
-];
 
 const DATE_RANGES = ["Last 7 days", "Last 30 days", "Last 90 days", "This year", "Custom"];
 
@@ -174,35 +113,169 @@ function Delta({ value, up, suffix = "" }: { value: string; up: boolean; suffix?
   );
 }
 
-// ─── KPI Cards ───────────────────────────────────────────────────────────────
-
-const kpis = [
-  { label: "Total Leads", value: "124,832", delta: "12.4%", up: true, icon: Users, color: C.primary, sub: "vs last month" },
-  { label: "Verified Contacts", value: "89,241", delta: "8.7%", up: true, icon: CheckCircle2, color: C.success, sub: "87.3% deliverability" },
-  { label: "Conversion Predicted", value: "6.8%", delta: "0.4%", up: false, icon: Target, color: C.warning, sub: "AI forecast" },
-  { label: "Avg AI Score", value: "78.3", delta: "3.1%", up: true, icon: Brain, color: C.purple, sub: "across all leads" },
-  { label: "Enrichment Rate", value: "91.2%", delta: "2.8%", up: true, icon: Zap, color: C.teal, sub: "last 30 days" },
-  { label: "Outreach Open Rate", value: "34.6%", delta: "5.2%", up: true, icon: Activity, color: C.pink, sub: "vs industry 21%" },
-];
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function AIInsightsPage() {
+  const [leads, setLeads] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState("Last 30 days");
   const [dateOpen, setDateOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<"all" | "high" | "medium" | "low">("all");
 
-  const filtered = recommendations.filter((r) => {
+  useEffect(() => {
+    const fetchLeads = async () => {
+      try {
+        const data = await getLeads();
+        setLeads(data);
+      } catch (error) {
+        console.error("Error fetching leads:", error);
+      }
+    };
+
+    fetchLeads();
+  }, []);
+
+  const totalLeads = leads.length;
+
+  const highQuality = leads.filter(
+    (lead) => lead.lead_quality === "High"
+  ).length;
+
+  const avgScore =
+    leads.length > 0
+      ? Math.round(
+        leads.reduce((sum, lead) => sum + lead.score, 0) / leads.length
+      )
+      : 0;
+
+  const verifiedContacts = leads.filter(
+    (lead) => lead.email || lead.phone
+  ).length;
+
+  
+
+  const tooltipStyle = {
+    contentStyle: { backgroundColor: C.white, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 },
+    cursor: { stroke: C.border },
+  };
+
+  const industryCount = leads.reduce((acc: Record<string, number>, lead: any) => {
+    const industry = lead.industry || "Unknown";
+    acc[industry] = (acc[industry] || 0) + 1;
+    return acc;
+  }, {});
+
+  const totalIndustryLeads = leads.length;
+
+  const industryData = Object.entries(industryCount).map(([name, count]) => ({
+    name,
+    value: totalIndustryLeads > 0 ? Math.round((Number(count) / totalIndustryLeads) * 100) : 0,
+    leads: Number(count),
+    growth: "-",
+  }));
+  
+  const scoreRanges = [
+  { range: "90-100", count: 0 },
+  { range: "80-89", count: 0 },
+  { range: "70-79", count: 0 },
+  { range: "60-69", count: 0 },
+  { range: "50-59", count: 0 },
+  { range: "<50", count: 0 },
+];
+
+leads.forEach((lead: any) => {
+  const score = Number(lead.score || 0);
+
+  if (score >= 90) scoreRanges[0].count++;
+  else if (score >= 80) scoreRanges[1].count++;
+  else if (score >= 70) scoreRanges[2].count++;
+  else if (score >= 60) scoreRanges[3].count++;
+  else if (score >= 50) scoreRanges[4].count++;
+  else scoreRanges[5].count++;
+});
+
+const scoreDistData = scoreRanges;
+
+const highScoreLeads = leads.filter((lead: any) => (lead.score || 0) >= 80);
+
+const missingContacts = leads.filter(
+  (lead: any) => !lead.email && !lead.phone
+);
+
+const highQualityLeads = leads.filter(
+  (lead: any) => lead.lead_quality === "High"
+);
+
+const topIndustry =
+  industryData.length > 0
+    ? industryData.reduce((a, b) => (a.leads > b.leads ? a : b))
+    : null;
+
+const recommendations = [
+  {
+    icon: Brain,
+    color: C.primary,
+    badge: "Lead Analysis",
+    title: "High Score Leads",
+    body: `${highScoreLeads.length} lead(s) have an AI score above 80 and should be prioritized for outreach.`,
+    action: "View Leads",
+    confidence: 95,
+  },
+
+  {
+    icon: TrendingUp,
+    color: C.success,
+    badge: "Industry Insight",
+    title: "Top Industry",
+    body: topIndustry
+      ? `${topIndustry.name} is your largest industry with ${topIndustry.leads} lead(s).`
+      : "No industry data available.",
+    action: "View Industry",
+    confidence: 90,
+  },
+
+  {
+    icon: Target,
+    color: C.warning,
+    badge: "Lead Quality",
+    title: "High Quality Leads",
+    body: `${highQualityLeads.length} lead(s) are marked as High Quality and ready for outreach.`,
+    action: "View Leads",
+    confidence: 88,
+  },
+
+  {
+    icon: AlertCircle,
+    color: C.error,
+    badge: "Missing Data",
+    title: "Incomplete Contacts",
+    body: `${missingContacts.length} lead(s) are missing both email and phone information.`,
+    action: "Review Leads",
+    confidence: 98,
+  },
+];
+
+const filtered = recommendations.filter((r) => {
     if (activeFilter === "all") return true;
     if (activeFilter === "high") return r.confidence >= 90;
     if (activeFilter === "medium") return r.confidence >= 80 && r.confidence < 90;
     return r.confidence < 80;
   });
 
-  const tooltipStyle = {
-    contentStyle: { backgroundColor: C.white, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12 },
-    cursor: { stroke: C.border },
-  };
+  const activityFeed = leads
+  .slice()
+  .reverse() // newest first
+  .slice(0, 5) // show latest 5
+  .map((lead: any) => ({
+    id: lead.id,
+    icon: CheckCircle2,
+    color: C.success,
+    title: `New Lead: ${lead.company_name}`,
+    detail: `${lead.industry || "Unknown"} • Score: ${lead.score || 0} • Quality: ${
+      lead.lead_quality || "Unknown"
+    }`,
+    time: `Lead #${lead.id}`,
+    badge: lead.status || "New",
+  }));
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ backgroundColor: C.bg }}>
@@ -317,26 +390,8 @@ export function AIInsightsPage() {
           </div>
         </div>
 
-        {/* ── KPI Cards ────────────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
-          {kpis.map(({ label, value, delta, up, icon: Icon, color, sub }) => (
-            <Card key={label}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${color}12` }}>
-                  <Icon className="w-4 h-4" style={{ color }} />
-                </div>
-                <Delta value={delta} up={up} />
-              </div>
-              <p className="text-2xl font-black" style={{ color: C.text }}>{value}</p>
-              <p className="text-xs font-medium mt-0.5" style={{ color: C.muted }}>{label}</p>
-              <p className="text-xs mt-0.5" style={{ color: `${C.muted}99` }}>{sub}</p>
-            </Card>
-          ))}
-        </div>
-
         {/* ── Charts row 1 ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
           {/* Lead growth area chart */}
           <Card className="lg:col-span-2">
             <SectionLabel
@@ -388,27 +443,37 @@ export function AIInsightsPage() {
                 paddingAngle={2}
               >
                 {industryData.map((_, i) => (
-                  <Cell key={`ind-${i}`} fill={industryColors[i]} />
+                  <Cell
+                    key={`ind-${i}`}
+                    fill={industryColors[i % industryColors.length]}
+                  />
                 ))}
               </Pie>
               <Tooltip contentStyle={tooltipStyle.contentStyle} formatter={(v: any) => [`${v}%`, "Share"]} />
             </PieChart>
             <div className="space-y-2 mt-1">
-              {industryData.map(({ name, leads, growth }, i) => (
+              {industryData.map(({ name, leads }, i) => (
                 <div key={name} className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: industryColors[i] }} />
-                  <span className="text-xs flex-1 truncate" style={{ color: C.textSec }}>{name}</span>
-                  <span className="text-xs font-semibold" style={{ color: C.text }}>{(leads / 1000).toFixed(0)}k</span>
-                  <span className="text-xs font-medium" style={{ color: C.success }}>{growth}</span>
+                  <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                    style={{
+                      backgroundColor: industryColors[i % industryColors.length],
+                    }}
+                  />
+                  <span className="text-xs flex-1 truncate" style={{ color: C.textSec }}>
+                    {name}
+                  </span>
+                  <span className="text-xs font-semibold" style={{ color: C.text }}>
+                    {leads} Leads
+                  </span>
                 </div>
               ))}
             </div>
           </Card>
-        </div>
+        </div> {/* <-- Added missing closing tag for Row 1 layout grid */}
 
         {/* ── Charts row 2 ─────────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-
           {/* AI Score distribution */}
           <Card>
             <SectionLabel title="AI Score Distribution" subtitle="Lead quality breakdown" />
@@ -484,7 +549,6 @@ export function AIInsightsPage() {
 
         {/* ── AI Recommendations + Activity Feed ───────────────────────────── */}
         <div className="grid grid-cols-1 xl:grid-cols-5 gap-5">
-
           {/* Recommendations — 3 cols */}
           <div className="xl:col-span-3 space-y-0" style={{ backgroundColor: C.white, border: `1px solid ${C.border}`, borderRadius: 12 }}>
             <div className="px-5 py-4 flex items-center justify-between flex-wrap gap-2" style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -642,7 +706,7 @@ export function AIInsightsPage() {
                         </div>
                         <div>
                           <p className="font-semibold text-xs" style={{ color: C.text }}>{m.name}</p>
-                          <p className="text-xs" style={{ color: C.muted }}>{m.role}</p>
+                          <p className="text-xs" style={{ color: m.muted }}>{m.role}</p>
                         </div>
                       </div>
                     </td>
@@ -676,6 +740,7 @@ export function AIInsightsPage() {
             </table>
           </div>
         </div>
+
       </div>
     </div>
   );

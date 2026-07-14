@@ -34,7 +34,8 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>("dashboard");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [prevPage, setPrevPage] = useState<Page>("leads");
-
+  const [selectedLead, setSelectedLead] = useState<any>(null);
+  const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const navigate = (page: Page) => {
     if (page !== "lead-detail") setPrevPage(currentPage);
     setCurrentPage(page);
@@ -63,10 +64,22 @@ export default function App() {
           />
         )}
         {currentPage === "leads" && (
-          <LeadsPage onViewLead={() => navigate("lead-detail")} />
+         <LeadsPage
+           onViewLead={(lead) => {
+              setSelectedLead(lead);
+              setSelectedLeadId(lead.id);
+              navigate("lead-detail");
+  }}
+
+/>
         )}
         {currentPage === "lead-detail" && (
-          <LeadDetailPage onBack={() => navigate(prevPage === "lead-detail" ? "leads" : prevPage)} />
+        <LeadDetailPage
+           leadId={selectedLeadId}
+             onBack={() =>
+             navigate(prevPage === "lead-detail" ? "leads" : prevPage)
+  }
+/>
         )}
         {currentPage === "ai-insights" && <AIInsightsPage />}
         {currentPage === "crawl" && <CrawlPage />}
