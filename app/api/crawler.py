@@ -85,3 +85,43 @@ def start_crawl(job: CrawlRequest):
             status_code=400,
             detail=str(e)
         )
+@router.get("/history")
+def get_crawl_history():
+    return crawler_jobs
+
+@router.get("/stats")
+def get_crawl_stats():
+
+    total = len(crawler_jobs)
+
+    completed = len([
+        job for job in crawler_jobs
+        if job["status"] == "Completed"
+    ])
+
+    running = len([
+        job for job in crawler_jobs
+        if job["status"] == "Running"
+    ])
+
+    failed = len([
+        job for job in crawler_jobs
+        if job["status"] == "Failed"
+    ])
+
+    return {
+        "total": total,
+        "completed": completed,
+        "running": running,
+        "failed": failed
+    }
+
+@router.get("/status")
+def get_crawl_status():
+
+    if not crawler_jobs:
+        return {
+            "status": "No Crawl"
+        }
+
+    return crawler_jobs[-1]
